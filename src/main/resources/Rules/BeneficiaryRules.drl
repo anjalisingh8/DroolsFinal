@@ -1,0 +1,23 @@
+package Rules;
+
+import com.drools.Entity.Beneficiary;
+
+dialect "mvel";
+
+rule "InValid Beneficiary"
+salience 9
+when
+$beneficiary:Beneficiary((!beneficiaryType.equalsIgnoreCase("Small PPI") && !beneficiaryKYC.equalsIgnoreCase("Full") ) ||(!beneficiaryAccountStatus.equalsIgnoreCase("Active")))
+then
+$beneficiary.setBeneficiaryType("Invalid");
+System.out.println("InValid Beneficiary");
+end;
+
+rule "Valid Beneficiary"
+salience 10
+when
+$beneficiary:Beneficiary(beneficiaryAccountStatus.equalsIgnoreCase("Active") && beneficiaryKYC.equalsIgnoreCase("Full") && !beneficiaryType.equalsIgnoreCase("Small PPI"))
+then
+$beneficiary.setBeneficiaryType("Valid");
+System.out.println("Valid Beneficiary");
+end;

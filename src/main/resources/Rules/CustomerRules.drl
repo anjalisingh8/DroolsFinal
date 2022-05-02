@@ -1,0 +1,137 @@
+package Rules;
+
+import com.drools.Entity.Customer;
+import com.drools.Service.WalletService;
+
+dialect "mvel"
+
+
+rule "InValid Customer"
+salience 20
+when
+$customer:Customer(eval(true))
+then
+$customer.setCustomerType("InValid");
+//drools.halt();
+end;
+
+//Rule to Validate Customer when Account Status is Active and KYC is Full
+rule "Valid Customer"
+salience 10
+when
+$customer:Customer(customerAccountStatus.equalsIgnoreCase("Active") &&  ((customerTransactionType.equalsIgnoreCase("P2P") && customerKYC.equalsIgnoreCase("Full") ) ||(customerTransactionType.equalsIgnoreCase("P2M") && !customerKYC.equalsIgnoreCase("Empty"))))
+then
+$customer.setCustomerType("Valid");
+$customer.setCustomerTypeMessage("Valid Customer")
+System.out.println("Valid Customer");
+end;
+
+//Rule to Invalidate the Transaction when Custom Daily Transaction Limit is greater than Maximum Daily Transaction Limit
+rule "InValid Custom Daily Transaction Limit"
+salience 9
+when
+$customer:Customer(customerCustomDailyLimit > 100000.0)
+then
+$customer.setCustomerFundTransferStatus("InValid");
+$customer.setCustomerFundTransferMessage("InValid Custom Daily Limit , Cannot Set Custom Per Transaction Limit Above " + 100000.0);
+System.out.println("InValid Custom Daily Limit , Cannot Set Custom Per Transaction Limit Above " + 100000.0);
+drools.halt();
+end;
+
+//Rule to Invalidate the Transaction when Custom Monthly Transaction Limit is greater than Maximum Monthly Transaction Limit
+rule "InValid Custom Monthly Transaction Limit"
+salience 9
+when
+$customer:Customer(customerCustomMonthlyLimit > 3000000.0)
+then
+$customer.setCustomerFundTransferStatus("InValid");
+$customer.setCustomerFundTransferMessage("InValid Custom Monthly Limit , Cannot Set Custom Monthly Transaction Limit Above " + 3000000.0);
+System.out.println("InValid Custom Monthly Limit , Cannot Set Custom Monthly Transaction Limit Above " + 3000000.0);
+drools.halt();
+end;
+
+//Rule to Invalidate the Transaction when Custom Per Transaction Limit is greater than the Maximum Per Transaction Limit
+rule "InValid Custom Per Transaction Limit"
+salience 9
+when
+$customer:Customer(customerCustomPerTransactionLimit > 50000.0)
+then
+$customer.setCustomerFundTransferStatus("InValid");
+$customer.setCustomerFundTransferMessage("InValid Custom Per Transaction Limit , Cannot Set Custom Per Transaction Limit Above " + 50000.0);
+System.out.println("InValid Custom Per Transaction Limit , Cannot Set Custom Per Transaction Limit Above " + 50000.0);
+drools.halt();
+end;
+
+//Rule to Invalidate the Transaction when Monthly Limit breached
+rule "Maximum Monthly Limit Breached"
+salience 8
+when
+$customer:Customer(customerTransactionAmount > customerCustomMonthlyLimit)
+then
+$customer.setCustomerFundTransferStatus("InValid");
+$customer.setCustomerFundTransferMessage("Maximum Monthly Limit has been Breached - Monthly Transaction Limit is "+$customer.customerCustomMonthlyLimit);
+System.out.println("Maximum Monthly Limit has been Breached - Monthly Transaction Limit is "+$customer.customerCustomMonthlyLimit);
+drools.halt();
+end;
+
+//Rule to Invalidate the Transaction when Daily Limit Breached
+rule "Maximum Daily Limit Breached"
+salience 8
+when
+$customer:Customer(customerTransactionAmount > customerCustomDailyLimit)
+then
+$customer.setCustomerFundTransferStatus("InValid");
+$customer.setCustomerFundTransferMessage("Maximum Daily Limit has been Breached - Daily Transaction Limit is"+$customer.customerCustomDailyLimit);
+System.out.println("Maximum Daily Limit has been Breached - Daily Transaction Limit is "+$customer.customerCustomDailyLimit);
+drools.halt();
+end;
+
+//Rule to Invalidate the Transaction when Per Transaction Limit Breached
+rule "Per Transaction Limit Breached"
+salience 8
+when
+$customer:Customer(customerTransactionAmount > customerCustomPerTransactionLimit)
+then
+$customer.setCustomerFundTransferStatus("InValid");
+$customer.setCustomerFundTransferMessage("InValid Per Transaction Limit , Per Transaction Limit is " + $customer.customerCustomPerTransactionLimit);
+System.out.println("InValid Per Transaction Limit , Per Transaction Limit is " + $customer.customerCustomPerTransactionLimit);
+drools.halt();
+end;
+
+//Rule to Invalidate the Transaction when Customer failed to maintain the Minimum Account Balance
+rule "InValid Minimum Account Balance"
+salience 7
+when
+$customer:Customer(customerTransactionAmount > (customerAccountBalance - 100.0))
+then
+$customer.setCustomerFundTransferStatus("InValid");
+$customer.setCustomerFundTransferMessage("Unable to Process the transaction Reason- Minimum Balance Breached , Balance should be " + 100.0 + " After the transaction");
+System.out.println("Unable to Process the transaction Reason- Minimum Balance Breached , Balance should be " + 100.0 + " After the transaction");
+drools.halt();
+end;
+
+//Rule to Validate Transaction and Generate OTP Required Message
+rule "Transaction Require Authentication"
+salience 6
+when
+$customer:Customer(customerTransactionAmount > 2000.0)
+then
+$customer.setCustomerFundTransferStatus("Valid");
+$customer.setCustomerFundTransferMessage("Transaction above " + 2000.0 + " Require OTP Authentication");
+System.out.println("Transaction above " + 2000.0 + " Require OTP Authentication");
+drools.halt();
+end;
+
+//Rule to validate the Transaction
+rule "Valid Transaction"
+salience 5
+when
+$customer:Customer(customerTransactionAmount <= (customerAccountBalance - 100.0) && (customerTransactionAmount <= customerCustomMonthlyLimit) && (customerTransactionAmount <= customerCustomDailyLimit))
+then
+$customer.setCustomerFundTransferStatus("Valid");
+$customer.setCustomerFundTransferMessage("Transaction ready to be processed");
+$customer.setCustomerCustomMonthlyLimit($customer.customerCustomMonthlyLimit - $customer.customerTransactionAmount);
+$customer.setCustomerCustomDailyLimit($customer.customerCustomDailyLimit - $customer.customerTransactionAmount);
+System.out.println("Transaction is ready to be processed");
+end;
+
